@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelStore - Developer Console</title>
+    <style>
+        :root { --main-blue: #00d4ff; --bg: #0b0e14; --card: #1b2838; --header: #171a21; }
+        body { background: var(--bg); color: #c7d5e0; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        header { background: var(--header); padding: 15px 40px; display: flex; justify-content: space-between; border-bottom: 3px solid var(--main-blue); }
+        .container { padding: 30px; max-width: 1100px; margin: auto; }
+        
+        button { background: linear-gradient(to bottom, #47bfff 0%, #1a44c2 100%); border: none; padding: 10px 20px; border-radius: 3px; color: white; cursor: pointer; font-weight: bold; }
+        
+        /* Сетка игр */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 5px; border: 1px solid #233c51; }
+        .price-tag { color: #a3d200; font-weight: bold; margin-top: 10px; }
+
+        /* Форма публикации */
+        .publish-form { background: #21323f; padding: 25px; border-radius: 10px; border: 1px solid var(--main-blue); margin-bottom: 40px; display: none; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 14px; color: var(--main-blue); }
+        input, select, textarea { width: 100%; padding: 10px; background: #000; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal-box { background: #2a475e; padding: 30px; border-radius: 8px; width: 400px; border: 1px solid var(--main-blue); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>STEEL<span style="color:var(--main-blue)">STORE</span></h1>
+    <div style="display:flex; align-items:center; gap:20px;">
+        <span id="user-display">Гость</span>
+        <button id="btn-settings" onclick="toggleModal('settings-modal')" style="display:none;">Настройки</button>
+        <button id="btn-login-trigger" onclick="toggleModal('auth-modal')">Войти</button>
+    </div>
+</header>
+
+<div class="container">
+    <div id="dev-section" class="publish-form">
+        <h2 style="margin-top:0">Публикация нового проекта</h2>
+        <div class="grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="form-group">
+                <label>Название игры</label>
+                <input type="text" id="g-name" placeholder="Maximka City...">
+            </div>
+            <div class="form-group">
+                <label>Жанр</label>
+                <select id="g-genre">
+                    <option>Экшен</option><option>Шутер</option><option>Хоррор</option><option>Симулятор</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Описание игры</label>
+            <textarea id="g-desc" rows="3" placeholder="О чем ваша игра?"></textarea>
+        </div>
+        <div class="grid" style="grid-template-columns: 1fr 1fr 1fr;">
+            <div class="form-group"><label>Файл (.exe)</label><input type="file" id="g-file"></div>
+            <div class="form-group"><label>Скриншоты (URL)</label><input type="text" id="g-img" placeholder="Ссылка на фото"></div>
+            <div class="form-group"><label>Трейлер (YouTube URL)</label><input type="text" id="g-vid" placeholder="Ссылка на видео"></div>
+        </div>
+        <div class="form-group">
+            <label>Тип оплаты</label>
+            <select id="g-pay" onchange="document.getElementById('price-input').style.display = (this.value=='Paid'?'block':'none')">
+                <option value="Free">Бесплатно</option>
+                <option value="Paid">Платно</option>
+            </select>
+            <input type="number" id="price-input" style="display:none; margin-top:10px;" placeholder="Цена в ГРН">
+        </div>
+        <button onclick="publishFullGame()" style="width:100%; padding:15px; font-size:16px;">ОПУБЛИКОВАТЬ ПРОДУКТ</button>
+    </div>
+
+    <h2>Витрина</h2>
+    <div class="grid" id="game-grid">
+        <div class="card">
+            <h3>Maximka City Beta 1.1</h3>
+            <p style="font-size:12px">Автор: MaximPro609 | Жанр: Шутер</p>
+            <p>Первая игра в SteelStore. Исследуй город!</p>
+            <div class="price-tag">БЕСПЛАТНО</div>
+            <button style="margin-top:10px; width:100%">Скачать</button>
+        </div>
+    </div>
+</div>
+
+<div id="auth-modal" class="modal"><div class="modal-box">
+    <h2>STEELBOX ID</h2>
+    <input type="text" id="reg-nick" placeholder="Никнейм">
+    <input type="password" id="reg-pass" placeholder="Пароль">
+    <button style="width:100%" onclick="login()">Войти</button>
+</div></div>
+
+<div id="settings-modal" class="modal"><div class="modal-box">
+    <h2>Профиль</h2>
+    <p id="profile-info"></p>
+    <button onclick="activateDev()">Статус Издателя</button><br><br>
+    <button style="background:#555; width:100%" onclick="localStorage.clear(); location.reload();">Выйти</button>
+    <button style="margin-top:10px; width:100%" onclick="toggleModal('settings-modal')">Закрыть</button>
+</div></div>
+
+<script>
+    function toggleModal(id) { document.getElementById(id).style.display = (document.getElementById(id).style.display === 'flex') ? 'none' : 'flex'; }
+
+    function login() {
+        const n = document.getElementById('reg-nick').value;
+        const p = document.getElementById('reg-pass').value;
+        if(n === "MaximPro609" && p === "Dodo") {
+            if(prompt("Код админа:") === "6783") { localStorage.setItem('dev', 'true'); }
+        }
+        localStorage.setItem('user', n);
+        localStorage.setItem('pass', p);
+        location.reload();
+    }
+
+    window.onload = function() {
+        const u = localStorage.getItem('user');
+        if(u) {
+            document.getElementById('auth-modal').style.display = 'none';
+            document.getElementById('btn-login-trigger').style.display = 'none';
+            document.getElementById('btn-settings').style.display = 'block';
+            document.getElementById('user-display').innerText = u;
+            if(localStorage.getItem('dev')) document.getElementById('dev-section').style.display = 'block';
+        } else { document.getElementById('auth-modal').style.display = 'flex'; }
+        loadItems();
+    };
+
+    function publishFullGame() {
+        const game = {
+            name: document.getElementById('g-name').value,
+            genre: document.getElementById('g-genre').value,
+            desc: document.getElementById('g-desc').value,
+            price: document.getElementById('g-pay').value === 'Free' ? 'БЕСПЛАТНО' : document.getElementById('price-input').value + ' ГРН',
+            author: localStorage.getItem('user')
+        };
+        if(!game.name) return alert("Введите название!");
+        
+        const list = JSON.parse(localStorage.getItem('my_store') || '[]');
+        list.push(game);
+        localStorage.setItem('my_store', JSON.stringify(list));
+        location.reload();
+    }
+
+    function loadItems() {
+        const grid = document.getElementById('game-grid');
+        const list = JSON.parse(localStorage.getItem('my_store') || '[]');
+        list.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `<h3>${item.name}</h3><p style="font-size:12px">Автор: ${item.author} | ${item.genre}</p>
+                             <p>${item.desc}</p><div class="price-tag">${item.price}</div><button style="width:100%;margin-top:10px">Скачать</button>`;
+            grid.appendChild(div);
+        });
+    }
+
+    function activateDev() { localStorage.setItem('dev', 'true'); location.reload(); }
+</script>
+</body>
+</html>
