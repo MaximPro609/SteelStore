@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelStore Admin Terminal</title>
+    <style>
+        :root { --main-blue: #00d4ff; --bg: #0b0e14; --card: #1b2838; --header: #171a21; --safe: #a3d200; --error: #ff4b2b; }
+        body { background: var(--bg); color: #c7d5e0; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        header { background: var(--header); padding: 10px 30px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--main-blue); align-items: center; }
+        .container { padding: 20px; max-width: 1000px; margin: auto; }
+        .safe-banner { background: rgba(0, 212, 255, 0.05); border: 1px solid #233c51; padding: 8px 15px; border-radius: 4px; font-size: 11px; margin-bottom: 20px; color: var(--main-blue); font-weight: bold; }
+        .publish-form { background: #1c2d3d; padding: 25px; border-radius: 8px; border: 1px solid var(--main-blue); margin-bottom: 30px; }
+        input, select { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 4px; box-sizing: border-box; margin-top: 8px; }
+        .btn-pub { background: var(--safe); color: black; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 4px; margin-top: 20px; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 6px; border: 1px solid #233c51; position: relative; }
+        .mod-section { background: rgba(255, 165, 0, 0.1); border: 1px dashed orange; padding: 15px; margin-bottom: 30px; display: none; border-radius: 8px; }
+        .mod-item { background: #000; padding: 12px; margin-top: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-box { background: var(--card); padding: 30px; border: 1px solid var(--main-blue); border-radius: 8px; width: 320px; }
+        .test-link { background: #2a475e; color: #66c0f4; padding: 5px 10px; text-decoration: none; border-radius: 3px; font-size: 12px; font-weight: bold; margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2 onclick="location.reload()" style="cursor:pointer">STEEL<span style="color:var(--main-blue)">STORE</span></h2>
+    <div style="display:flex; gap:15px; align-items:center;">
+        <span id="user-display" style="color:var(--safe); font-weight:bold;"></span>
+        <button onclick="toggleModal('settings-modal')" id="btn-settings" style="display:none; background:#2a475e; color:white; border:none; padding:8px 15px; border-radius:3px; cursor:pointer;">⚙ Кабинет</button>
+        <button onclick="toggleModal('auth-modal')" id="btn-login-trigger" style="background:var(--main-blue); color:black; border:none; padding:8px 20px; border-radius:3px; cursor:pointer; font-weight:bold;">ВОЙТИ</button>
+    </div>
+</header>
+
+<div class="container">
+    <div class="safe-banner">● SYSTEM: ONLINE ● ADMIN: MAXIMPRO609 ● MODE: SECURE STORAGE</div>
+
+    <div id="admin-mod-area" class="mod-section">
+        <h3 style="color:orange; margin:0 0 10px 0;">🛡 Очередь модерации</h3>
+        <div id="mod-queue-list"></div>
+    </div>
+
+    <div id="dev-section" class="publish-form" style="display:none;">
+        <h3 style="margin:0 0 15px 0; color:var(--main-blue);">Опубликовать проект</h3>
+        <input type="text" id="g-name" placeholder="Название игры">
+        <select id="g-genre"><option>Экшен</option><option>Шутер</option><option>Хоррор</option></select>
+        <select id="g-age"><option>3+</option><option>12+</option><option>18+</option></select>
+        <input type="file" id="g-file-input">
+        <button class="btn-pub" onclick="sendToModeration()">ОТПРАВИТЬ НА ПРОВЕРКУ</button>
+    </div>
+
+    <h3>Витрина игр</h3>
+    <div class="grid" id="game-grid"></div>
+</div>
+
+<div id="auth-modal" class="modal"><div class="modal-box">
+    <h3>Вход</h3>
+    <input type="text" id="reg-nick" placeholder="Никнейм">
+    <button class="btn-pub" onclick="login()">ВОЙТИ</button>
+</div></div>
+
+<div id="settings-modal" class="modal"><div class="modal-box">
+    <h3 id="profile-info"></h3>
+    <button onclick="requestDevStatus()" style="width:100%; padding:10px; margin-bottom:10px;">Режим разработчика</button>
+    <button onclick="logout()" style="width:100%; padding:10px; background:var(--error); border:none; color:white;">Выйти</button>
+    <button class="btn-pub" onclick="toggleModal('settings-modal')">Закрыть</button>
+</div></div>
+
+<script>
+    function toggleModal(id) { document.getElementById(id).style.display = (document.getElementById(id).style.display === 'flex') ? 'none' : 'flex'; }
+
+    function login() {
+        const n = document.getElementById('reg-nick').value;
+        localStorage.setItem('user', n);
+        if(n === "MaximPro609") {
+            if(prompt("КЛЮЧ:") === "6783") localStorage.setItem('isAdmin', 'true');
+        }
+        location.reload();
+    }
+
+    function logout() { localStorage.clear(); location.reload(); }
+    function requestDevStatus() { localStorage.setItem('isDev', 'true'); location.reload(); }
+
+    function sendToModeration() {
+        const name = document.getElementById('g-name').value;
+        const file = document.getElementById('g-file-input').files[0];
+        if(!name || !file) return alert("Файл не выбран!");
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const game = {
+                id: Date.now(),
+                name: name,
+                genre: document.getElementById('g-genre').value,
+                age: document.getElementById('g-age').value,
+                author: localStorage.getItem('user'),
+                fileData: e.target.result, // Файл сохранен как строка Base64
+                fileName: file.name
+            };
+            const queue = JSON.parse(localStorage.getItem('pending_queue') || '[]');
+            queue.push(game);
+            try {
+                localStorage.setItem('pending_queue', JSON.stringify(queue));
+                alert("Готово! Игра в базе.");
+                location.reload();
+            } catch(e) { alert("Файл слишком большой!"); }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function approve(id) {
+        let queue = JSON.parse(localStorage.getItem('pending_queue') || '[]');
+        let store = JSON.parse(localStorage.getItem('my_store') || '[]');
+        const game = queue.find(g => g.id === id);
+        if(game) {
+            store.push(game);
+            localStorage.setItem('my_store', JSON.stringify(store));
+            localStorage.setItem('pending_queue', JSON.stringify(queue.filter(g => g.id !== id)));
+        }
+        location.reload();
+    }
+
+    function reject(id) {
+        let queue = JSON.parse(localStorage.getItem('pending_queue') || '[]');
+        localStorage.setItem('pending_queue', JSON.stringify(queue.filter(g => g.id !== id)));
+        location.reload();
+    }
+
+    window.onload = function() {
+        const user = localStorage.getItem('user');
+        const isAdmin = localStorage.getItem('isAdmin');
+        const isDev = localStorage.getItem('isDev');
+
+        if(user) {
+            document.getElementById('user-display').innerText = user;
+            document.getElementById('btn-login-trigger').style.display = 'none';
+            document.getElementById('btn-settings').style.display = 'block';
+            if(isAdmin || isDev) document.getElementById('dev-section').style.display = 'block';
+        }
+
+        if(isAdmin === 'true') {
+            document.getElementById('admin-mod-area').style.display = 'block';
+            const queue = JSON.parse(localStorage.getItem('pending_queue') || '[]');
+            queue.forEach(g => {
+                document.getElementById('mod-queue-list').innerHTML += `
+                    <div class="mod-item">
+                        <span>${g.name} [${g.author}]</span>
+                        <div>
+                            <a href="${g.fileData}" download="${g.fileName}" class="test-link">ТЕСТ</a>
+                            <button onclick="approve(${g.id})" style="background:var(--safe); border:none; padding:5px;">OK</button>
+                            <button onclick="reject(${g.id})" style="background:var(--error); border:none; color:white; padding:5px;">X</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        const store = JSON.parse(localStorage.getItem('my_store') || '[]');
+        store.forEach(g => {
+            document.getElementById('game-grid').innerHTML += `
+                <div class="card">
+                    <h3>${g.name}</h3>
+                    <p>Автор: ${g.author}</p>
+                    <a href="${g.fileData}" download="${g.fileName}" style="display:block; text-align:center; background:var(--main-blue); color:black; text-decoration:none; padding:10px; border-radius:4px; font-weight:bold;">СКАЧАТЬ</a>
+                </div>`;
+        });
+    };
+</script>
+</body>
+</html>
