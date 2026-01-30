@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelStore - MaximPro609 Edition</title>
+    <style>
+        :root { --main-blue: #00d4ff; --bg: #0b0e14; --card: #1b2838; --header: #171a21; --safe: #a3d200; --error: #ff4b2b; }
+        body { background: var(--bg); color: #c7d5e0; font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
+        header { background: var(--header); padding: 10px 30px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--main-blue); align-items: center; }
+        .container { padding: 20px; max-width: 1000px; margin: auto; }
+        .safe-banner { background: rgba(0, 212, 255, 0.05); border: 1px solid #233c51; padding: 8px 15px; border-radius: 4px; font-size: 11px; margin-bottom: 20px; color: var(--main-blue); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .publish-form { background: #1c2d3d; padding: 25px; border-radius: 8px; border: 1px solid var(--main-blue); margin-bottom: 30px; }
+        input, select { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 4px; box-sizing: border-box; margin-top: 8px; }
+        .btn-pub { background: var(--safe); color: black; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 4px; margin-top: 20px; cursor: pointer; transition: 0.3s; }
+        .btn-pub:hover { opacity: 0.8; transform: translateY(-2px); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 6px; border: 1px solid #233c51; position: relative; transition: 0.3s; }
+        .card:hover { border-color: var(--main-blue); box-shadow: 0 0 15px rgba(0,212,255,0.2); }
+        .mod-section { background: rgba(255, 165, 0, 0.1); border: 1px dashed orange; padding: 15px; margin-bottom: 30px; display: none; border-radius: 8px; }
+        .mod-item { background: #000; padding: 12px; margin-top: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid orange; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-box { background: var(--card); padding: 30px; border: 1px solid var(--main-blue); border-radius: 8px; width: 320px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .age-badge { position: absolute; top: 10px; right: 10px; background: #333; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: bold; border: 1px solid #555; }
+        .test-link { background: #2a475e; color: #66c0f4; padding: 5px 10px; text-decoration: none; border-radius: 3px; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2 style="cursor:pointer" onclick="location.reload()">STEEL<span style="color:var(--main-blue)">STORE</span></h2>
+    <div style="display:flex; gap:15px; align-items:center;">
+        <span id="user-display" style="color:var(--safe); font-weight:bold;"></span>
+        <button onclick="toggleModal('settings-modal')" id="btn-settings" style="display:none; background:#2a475e; color:white; border:none; padding:8px 15px; border-radius:3px; cursor:pointer;">⚙ Кабинет</button>
+        <button onclick="toggleModal('auth-modal')" id="btn-login-trigger" style="background:var(--main-blue); color:black; border:none; padding:8px 20px; border-radius:3px; cursor:pointer; font-weight:bold;">ВОЙТИ</button>
+    </div>
+</header>
+
+<div class="container">
+    <div class="safe-banner">● СТАТУС: ОНЛАЙН ● МОДЕРАТОР: MAXIMPRO609 ● ВЕРСИЯ: 2.0</div>
+
+    <div id="admin-mod-area" class="mod-section">
+        <h3 style="color:orange; margin:0 0 10px 0;">🛡 Очередь модерации</h3>
+        <div id="mod-queue-list"></div>
+    </div>
+
+    <div id="dev-section" class="publish-form" style="display:none;">
+        <h3 style="margin:0 0 15px 0; color:var(--main-blue);">Опубликовать проект</h3>
+        <label>Название игры</label>
+        <input type="text" id="g-name" placeholder="Введите название...">
+        
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <div style="flex:1;">
+                <label>Жанр</label>
+                <select id="g-genre">
+                    <option>Экшен</option><option>Шутер</option><option>Хоррор</option><option>Симулятор</option>
+                </select>
+            </div>
+            <div style="flex:1;">
+                <label>Возраст</label>
+                <select id="g-age">
+                    <option>3+</option><option>7+</option><option>12+</option><option>16+</option><option>18+</option>
+                </select>
+            </div>
+        </div>
+
+        <label style="display:block; margin-top:15px;">Файл игры (.zip / .apk / .exe)</label>
+        <input type="file" id="g-file-input">
+        
+        <button class="btn-pub" onclick="sendToModeration()">ОТПРАВИТЬ НА ПРОВЕРКУ</button>
+    </div>
+
+    <h3>Витрина игр</h3>
+    <div class="grid" id="game-grid"></div>
+</div>
+
+<div id="auth-modal" class="modal"><div class="modal-box">
+    <h3 style="margin-top:0">Авторизация</h3>
+    <input type="text" id="reg-nick" placeholder="Никнейм">
+    <input type="password" id="reg-pass" placeholder="Пароль">
+    <button class="btn-pub" onclick="login()">ВОЙТИ</button>
+    <button onclick="toggleModal('auth-modal')" style="width:100%; background:none; color:white; border:none; margin-top:10px; cursor:pointer;">Отмена</button>
+</div></div>
+
+<div id="settings-modal" class="modal"><div class="modal-box">
+    <h3 style="margin-top:0">Профиль</h3>
+    <p id="profile-info" style="font-size:14px; color:var(--main-blue);"></p>
+    <button onclick="requestDevStatus()" id="dev-btn-toggle" style="width:100%; padding:10px; margin-bottom:10px; cursor:pointer;">Режим разработчика</button>
+    <button onclick="logout()" style="width:100%; padding:10px; background:var(--error); color:white; border:none; cursor:pointer; border-radius:4px;">Выйти из аккаунта</button>
+    <button class="btn-pub" onclick="toggleModal('settings-modal')" style="background:#233c51; color:white;">Закрыть</button>
+</div></div>
+
+<script>
+    function toggleModal(id) { document.getElementById(id).style.display = (document.getElementById(id).style.display === 'flex') ? 'none' : 'flex'; }
+
+    // ЛОГИН С КЛЮЧОМ
+    function login() {
+        const n = document.getElementById('reg-nick').value;
+        const p = document.getElementById('reg-pass').value;
+        if(!n) return alert("Введите ник!");
+
+        localStorage.setItem('user', n);
+
+        if(n === "MaximPro609") {
+            const key = prompt("ВВЕДИТЕ СЕКРЕТНЫЙ КЛЮЧ АДМИНА:");
+            if(key === "6783") {
+                localStorage.setItem('isAdmin', 'true');
+                alert("Доступ администратора подтвержден!");
+            }
+        }
+        location.reload();
+    }
+
+    function logout() { localStorage.clear(); location.reload(); }
+    function requestDevStatus() { localStorage.setItem('isDev', 'true'); location.reload(); }
+
+    // МОДЕРАЦИЯ И ФАЙЛЫ
+    function sendToModeration() {
+        const name = document.getElementById('g-name').value;
+        const fileInput = document.getElementById('g-file-input');
+        const file = fileInput.files[0];
+
+        if(!name || !file) return alert("Заполни поля и выбери файл!");
+
+        // Создаем временную ссылку на файл для проверки
+        const fakeUrl = URL.createObjectURL(file);
+
+        const game = {
+            id: Date.now(),
+            name: name,
+            genre: document.getElementById('g-genre').value,
+            age: document.getElementById('g-age').value,
+            author: localStorage.getItem('user'),
+            fileData: fakeUrl, // Ссылка на файл
+            fileName: file.name
+        };
+
+        const queue = JSON.parse(localStorage.getItem('pending_queue') || '[]');
+        queue.push(game);
+        localStorage.setItem('pending_queue', JSON.stringify(queue));
+        
+        alert("Игра отправлена! Не закрывай страницу до одобрения, чтобы файл был доступен.");
+        location.reload();
+    }
+
+    function approve(id) {
+        let queue = JSON.parse(localStorage.getItem('pending_queue') || '[]');
+        let store = JSON.parse(localStorage.getItem('my_store') || '[]');
+        const game = queue.find(g => g.id === id);
+        
+        if(game) {
+            store.push(game);
+            localStorage.setItem('my_store', JSON.stringify(store));
+            localStorage.setItem('pending_queue', JSON.stringify(queue.filter(g => g.id !== id)));
+        }
+        location.reload();
+    }
+
+    function reject(id) {
+        let queue = JSON.parse(localStorage.getItem('pending_queue') || '[]');
+        localStorage.setItem('pending_queue', JSON.stringify(queue.filter(g => g.id !== id)));
+        location.reload();
+    }
+
+    function deleteGame(id) {
+        if(confirm("Удалить игру навсегда?")) {
+            let store = JSON.parse(localStorage.getItem('my_store') || '[]');
+            localStorage.setItem('my_store', JSON.stringify(store.filter(g => g.id !== id)));
+            location.reload();
+        }
+    }
+
+    // ЗАГРУЗКА
+    window.onload = function() {
+        const user = localStorage.getItem('user');
+        const isAdmin = localStorage.getItem('isAdmin');
+        const isDev = localStorage.getItem('isDev');
+
+        if(user) {
+            document.getElementById('user-display').innerText = user;
+            document.getElementById('btn-login-trigger').style.display = 'none';
+            document.getElementById('btn-settings').style.display = 'block';
+            document.getElementById('profile-info').innerText = `Ник: ${user} | Роль: ${isAdmin ? 'АДМИНИСТРАТОР' : (isDev ? 'РАЗРАБОТЧИК' : 'ИГРОК')}`;
+            
+            if(isAdmin || isDev) {
+                document.getElementById('dev-section').style.display = 'block';
+                document.getElementById('dev-btn-toggle').style.display = 'none';
+            }
+        }
+
+        // ОТОБРАЖЕНИЕ ОЧЕРЕДИ ДЛЯ МАКСА
+        if(isAdmin) {
+            document.getElementById('admin-mod-area').style.display = 'block';
+            const queue = JSON.parse(localStorage.getItem('pending_queue') || '[]');
+            const list = document.getElementById('mod-queue-list');
+            
+            if(queue.length === 0) list.innerHTML = "<p style='opacity:0.5'>Очередь пуста...</p>";
+            
+            queue.forEach(g => {
+                list.innerHTML += `
+                    <div class="mod-item">
+                        <span><b>${g.name}</b> от ${g.author}</span>
+                        <div>
+                            <a href="${g.fileData}" download="${g.fileName}" class="test-link">ТЕСТ ФАЙЛА</a>
+                            <button onclick="approve(${g.id})" style="background:var(--safe); border:none; padding:5px 10px; cursor:pointer; font-weight:bold;">ОДОБРИТЬ</button>
+                            <button onclick="reject(${g.id})" style="background:var(--error); border:none; padding:5px 10px; cursor:pointer; color:white;">X</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // ВИТРИНА
+        const store = JSON.parse(localStorage.getItem('my_store') || '[]');
+        store.forEach(g => {
+            document.getElementById('game-grid').innerHTML += `
+                <div class="card">
+                    <div class="age-badge">${g.age}</div>
+                    <h3 style="color:var(--main-blue); margin:0;">${g.name}</h3>
+                    <p style="font-size:11px; opacity:0.6; margin:5px 0;">Автор: ${g.author} | ${g.genre}</p>
+                    <a href="${g.fileData}" download="${g.fileName}" style="display:block; text-align:center; background:#233c51; color:white; text-decoration:none; padding:10px; border-radius:4px; margin-top:10px; font-weight:bold;">СКАЧАТЬ ПАКЕТ</a>
+                    ${(isAdmin || user === g.author) ? `<button onclick="deleteGame(${g.id})" style="width:100%; margin-top:8px; background:none; color:var(--error); border:1px solid var(--error); font-size:10px; cursor:pointer; padding:3px;">УДАЛИТЬ ИЗ СТОРА</button>` : ''}
+                </div>`;
+        });
+    };
+</script>
+</body>
+</html>
